@@ -54,6 +54,11 @@ public class PresetsScreen extends Screen {
     // Footer buttons (kept for rebuildLayout)
     private Button newPresetBtn, doneBtn, importPresetsBtn, exportPresetsBtn, openConfigBtn;
 
+    // ── Footer feedback (import/export result) ────────────────────────────────
+    private String footerMsg       = "";
+    private int    footerMsgColor  = 0xFFAAAAAA;
+    private long   footerMsgExpiry = 0L;
+
     // ── Create overlay ─────────────────────────────────────────────────────────
     private boolean creating = false;
     private EditBox createBox;
@@ -132,9 +137,16 @@ public class PresetsScreen extends Screen {
                     }
                     if (selected == null) return;
                     PresetConfig.ImportResult result = PresetConfig.importFrom(java.nio.file.Path.of(selected));
-                    if (result != null) {
+                    if (result == null) {
+                        showFooterMsg("Import failed. Check logs for details.", 0xFFFF6666);
+                    } else if (result.imported() == 0) {
+                        showFooterMsg("No presets found in this file.", 0xFFFFAA44);
+                    } else if (result.conflictsReassigned() > 0) {
                         presetList.refresh();
-                        if (result.conflictsReassigned() > 0) showImportConflictWarning(result.conflictsReassigned());
+                        showImportConflictWarning(result.conflictsReassigned());
+                    } else {
+                        showFooterMsg("Imported " + result.imported() + " presets.", 0xFF88FF88);
+                        presetList.refresh();
                     }
                 }
         ).bounds(4, this.height - 26, LIST_W / 2 - 6, 20).build();
@@ -153,7 +165,9 @@ public class PresetsScreen extends Screen {
                                 "JSON preset file (*.json)");
                     }
                     if (target == null) return;
-                    PresetConfig.exportTo(java.nio.file.Path.of(target));
+                    int exported = PresetConfig.exportTo(java.nio.file.Path.of(target));
+                    if (exported < 0) showFooterMsg("Export failed. Check logs for details.", 0xFFFF6666);
+                    else showFooterMsg("Exported " + exported + " presets.", 0xFF88FF88);
                 }
         // Provisional bounds — corrected by rebuildLayout() at the end of init().
         ).bounds(4, this.height - 26, LIST_W / 2 - 6, 20).build();
@@ -391,6 +405,12 @@ public class PresetsScreen extends Screen {
         int footerSepX = (editingPreset != null) ? LIST_W + 1 : 8;
         g.fill(footerSepX, this.height - 58, this.width - 8, this.height - 57, 0xFF111111);
         g.fill(footerSepX, this.height - 57, this.width - 8, this.height - 56, 0xFF555555);
+
+        // ── Import/Export feedback (timed) ────────────────────────────────────
+        if (!footerMsg.isEmpty() && System.currentTimeMillis() < footerMsgExpiry) {
+            int msgCx = (editingPreset != null) ? (LIST_W + 1 + this.width) / 2 : this.width / 2;
+            g.centeredText(this.font, footerMsg, msgCx, this.height - 70, footerMsgColor);
+        }
 
         // ── Title ─────────────────────────────────────────────────────────────
         if (editingPreset != null) {
@@ -935,6 +955,12 @@ public class PresetsScreen extends Screen {
             PresetConfig.WIKI_PRESETS_URL,
             true
         ));
+    }
+
+    private void showFooterMsg(String msg, int color) {
+        footerMsg      = msg;
+        footerMsgColor = color;
+        footerMsgExpiry = System.currentTimeMillis() + 4000L;
     }
 
     @Override
