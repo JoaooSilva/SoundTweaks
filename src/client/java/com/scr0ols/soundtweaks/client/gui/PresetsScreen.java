@@ -54,6 +54,11 @@ public class PresetsScreen extends Screen {
     // Footer buttons (kept for rebuildLayout)
     private Button newPresetBtn, doneBtn, importPresetsBtn, exportPresetsBtn, openConfigBtn;
 
+    // ── Footer feedback (import/export result) ────────────────────────────────
+    private String footerMsg       = "";
+    private int    footerMsgColor  = 0xFFAAAAAA;
+    private long   footerMsgExpiry = 0L;
+
     // ── Create overlay ─────────────────────────────────────────────────────────
     private boolean creating = false;
     private EditBox createBox;
@@ -131,8 +136,18 @@ public class PresetsScreen extends Screen {
                                 "JSON preset file (*.json)", false);
                     }
                     if (selected == null) return;
-                    int result = PresetConfig.importFrom(java.nio.file.Path.of(selected));
-                    if (result >= 0) presetList.refresh();
+                    PresetConfig.ImportResult result = PresetConfig.importFrom(java.nio.file.Path.of(selected));
+                    if (result == null) {
+                        showFooterMsg("Import failed. Check logs for details.", 0xFFFF6666);
+                    } else if (result.imported() == 0) {
+                        showFooterMsg("No presets found in this file.", 0xFFFFAA44);
+                    } else if (result.conflictsReassigned() > 0) {
+                        presetList.refresh();
+                        showImportConflictWarning(result.conflictsReassigned());
+                    } else {
+                        showFooterMsg("Imported " + result.imported() + " presets.", 0xFF88FF88);
+                        presetList.refresh();
+                    }
                 }
         ).bounds(4, this.height - 26, LIST_W / 2 - 6, 20).build();
         this.importPresetsBtn.setTooltip(Tooltip.create(Component.translatable("soundtweaks.tooltip.import_presets")));
@@ -150,7 +165,9 @@ public class PresetsScreen extends Screen {
                                 "JSON preset file (*.json)");
                     }
                     if (target == null) return;
-                    PresetConfig.exportTo(java.nio.file.Path.of(target));
+                    int exported = PresetConfig.exportTo(java.nio.file.Path.of(target));
+                    if (exported < 0) showFooterMsg("Export failed. Check logs for details.", 0xFFFF6666);
+                    else showFooterMsg("Exported " + exported + " presets.", 0xFF88FF88);
                 }
         // Provisional bounds — corrected by rebuildLayout() at the end of init().
         ).bounds(4, this.height - 26, LIST_W / 2 - 6, 20).build();
@@ -389,6 +406,12 @@ public class PresetsScreen extends Screen {
         g.fill(footerSepX, this.height - 58, this.width - 8, this.height - 57, 0xFF111111);
         g.fill(footerSepX, this.height - 57, this.width - 8, this.height - 56, 0xFF555555);
 
+        // ── Import/Export feedback (timed) ────────────────────────────────────
+        if (!footerMsg.isEmpty() && System.currentTimeMillis() < footerMsgExpiry) {
+            int msgCx = (editingPreset != null) ? (LIST_W + 1 + this.width) / 2 : this.width / 2;
+            g.centeredText(this.font, footerMsg, msgCx, this.height - 70, footerMsgColor);
+        }
+
         // ── Title ─────────────────────────────────────────────────────────────
         if (editingPreset != null) {
             g.centeredText(this.font, I18n.get("soundtweaks.presets.title"), LIST_W / 2, 10, 0xFFFFFFFF);
@@ -412,18 +435,14 @@ public class PresetsScreen extends Screen {
             g.fill(0, 0, this.width, this.height, 0xBB000000);
             int cx = this.width / 2 - 130, cy = this.height / 2 - 22;
             String draft = createBox.getValue().trim();
-            boolean nameExists = !draft.isEmpty() && PresetConfig.getPresets().stream()
-                    .anyMatch(p -> p.name.equalsIgnoreCase(draft));
             boolean nameEmpty  = draft.isEmpty();
-            createConfirmBtn.active = !nameExists && !nameEmpty;
+            createConfirmBtn.active = !nameEmpty;
             g.fill(cx - 10, cy - 26, cx + 232, cy + 46, 0xFF1A1A2E);
             g.fill(cx - 10, cy - 26, cx + 232, cy - 25, 0xFF444466); // topo
             g.fill(cx - 10, cy + 45, cx + 232, cy + 46, 0xFF444466); // baixo
             g.fill(cx - 10, cy - 26, cx - 9,   cy + 46, 0xFF444466); // esquerda
             g.fill(cx + 231, cy - 26, cx + 232, cy + 46, 0xFF444466); // direita
             g.text(this.font, "New preset name:", cx, cy - 18, 0xFFCCCCFF);
-            if (nameExists)
-                g.centeredText(this.font, "Name already in use!", cx + 110, cy + 13, 0xFFFF5555);
             createBox.extractRenderState(g, mouseX, mouseY, a);
             createConfirmBtn.extractRenderState(g, mouseX, mouseY, a);
             createCancelBtn.extractRenderState(g, mouseX, mouseY, a);
@@ -824,7 +843,7 @@ public class PresetsScreen extends Screen {
         this.minecraft.setScreen(new ConfirmScreen(
             confirmed -> {
                 if (confirmed) {
-                    PresetConfig.deletePreset(toDelete.name);
+                    PresetConfig.deletePreset(toDelete.id);
                     closeDetailPanel();
                 }
                 this.minecraft.setScreen(PresetsScreen.this);
@@ -925,8 +944,23 @@ public class PresetsScreen extends Screen {
     private void confirmRename() {
         if (editingPreset != null) {
             String name = renameBox.getValue().trim();
-            if (!name.isEmpty()) { PresetConfig.renamePreset(editingPreset.name, name); presetList.refresh(); }
+            if (!name.isEmpty()) { PresetConfig.renamePreset(editingPreset.id, name); presetList.refresh(); }
         }
+    }
+
+    private void showImportConflictWarning(int count) {
+        this.minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmLinkScreen(
+            confirmed -> this.minecraft.setScreen(PresetsScreen.this),
+            Component.translatable("soundtweaks.presets.import_conflict_body", count),
+            PresetConfig.WIKI_PRESETS_URL,
+            true
+        ));
+    }
+
+    private void showFooterMsg(String msg, int color) {
+        footerMsg      = msg;
+        footerMsgColor = color;
+        footerMsgExpiry = System.currentTimeMillis() + 4000L;
     }
 
     @Override
@@ -963,8 +997,8 @@ public class PresetsScreen extends Screen {
 
             @Override
             public void extractContent(GuiGraphicsExtractor g, int mouseX, int mouseY, boolean hovered, float a) {
-                boolean active   = PresetConfig.isActive(preset.name);
-                boolean fav      = PresetConfig.isFavorite(preset.name);
+                boolean active   = PresetConfig.isActive(preset.id);
+                boolean fav      = PresetConfig.isFavorite(preset.id);
                 boolean selected = (PresetsScreen.this.editingPreset == preset);
                 int rW = rowW(), pc = preset.argbColor();
 
@@ -1010,11 +1044,11 @@ public class PresetsScreen extends Screen {
 
                 int sx = starX();
                 if (mx >= sx && mx < sx+18 && my >= getY()+4 && my < getY()+20) {
-                    PresetConfig.setFavorite(preset.name, !PresetConfig.isFavorite(preset.name)); return true;
+                    PresetConfig.setFavorite(preset.id, !PresetConfig.isFavorite(preset.id)); return true;
                 }
                 int badgeX = getX()+10, badgeY = getY()+6;
                 if (mx >= badgeX && mx < badgeX+22 && my >= badgeY && my < badgeY+11) {
-                    PresetConfig.setActive(preset.name, !PresetConfig.isActive(preset.name)); return true;
+                    PresetConfig.setActive(preset.id, !PresetConfig.isActive(preset.id)); return true;
                 }
                 if (PresetsScreen.this.editingPreset == preset) {
                     PresetListWidget.this.setSelected(null);

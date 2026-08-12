@@ -174,9 +174,31 @@ public class ImportConfigScreen extends Screen {
             return;
         }
 
+        if (type == ImportType.PRESETS) {
+            PresetConfig.ImportResult ir = PresetConfig.importFrom(path);
+            if (ir == null) {
+                feedbackMsg   = "Error reading file. Is it a valid JSON config?";
+                feedbackColor = 0xFFFF6666;
+            } else if (ir.imported() == 0) {
+                feedbackMsg   = "No presets found in this file.";
+                feedbackColor = 0xFFFFAA44;
+            } else if (ir.conflictsReassigned() > 0) {
+                feedbackMsg   = "Imported " + ir.imported() + " presets. "
+                        + ir.conflictsReassigned() + " ID conflict(s) — IDs were reassigned. See logs.";
+                feedbackColor = 0xFFFFAA44;
+                if (onSuccess != null) onSuccess.run();
+                // Stay open so the user sees the conflict warning
+            } else {
+                feedbackMsg   = "Success! Imported " + ir.imported() + " presets.";
+                feedbackColor = 0xFF88FF88;
+                if (onSuccess != null) onSuccess.run();
+                this.minecraft.setScreen(parent);
+            }
+            return;
+        }
+
         int result;
         switch (type) {
-            case PRESETS -> result = PresetConfig.importFrom(path);
             case SOUNDS  -> result = VolumeConfig.SOUNDS.importFrom(path);
             case BLOCKS  -> result = VolumeConfig.BLOCKS.importFrom(path);
             default      -> result = -1;
@@ -185,11 +207,13 @@ public class ImportConfigScreen extends Screen {
         if (result < 0) {
             feedbackMsg   = "Error reading file. Is it a valid JSON config?";
             feedbackColor = 0xFFFF6666;
+        } else if (result == 0) {
+            feedbackMsg   = "No entries found in this file.";
+            feedbackColor = 0xFFFFAA44;
         } else {
             feedbackMsg   = "Success! Imported " + result + " entries.";
             feedbackColor = 0xFF88FF88;
             if (onSuccess != null) onSuccess.run();
-            // Close immediately after success
             this.minecraft.setScreen(parent);
         }
     }
