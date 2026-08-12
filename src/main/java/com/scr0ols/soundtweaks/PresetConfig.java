@@ -457,7 +457,8 @@ public class PresetConfig {
         obj.addProperty("id",             p.id);
         obj.addProperty("name",           p.name);
         obj.addProperty("colorIndex",     p.colorIndex);
-        if (p.customColor != 0) obj.addProperty("customColor", p.customColor);
+        if (p.colorIndex == CUSTOM_COLOR_INDEX && p.customColor != 0)
+            obj.addProperty("customColor", p.customColor);
         obj.addProperty("shortcutKey",      p.shortcutKey);
         obj.addProperty("shortcutHeldKey",  p.shortcutHeldKey);
         obj.addProperty("shortcutHeldKey2", p.shortcutHeldKey2);
