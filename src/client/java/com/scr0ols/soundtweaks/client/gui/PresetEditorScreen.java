@@ -310,6 +310,6 @@ public class PresetEditorScreen extends Screen {
         savedObject   = this.selectedObject;
         savedSearch   = this.searchQuery;
         savedScroll   = this.soundList != null ? this.soundList.getScrollAmount() : 0.0;
-        this.minecraft.setScreen(parent);
+        this.minecraft.gui.setScreen(parent);
     }
 }

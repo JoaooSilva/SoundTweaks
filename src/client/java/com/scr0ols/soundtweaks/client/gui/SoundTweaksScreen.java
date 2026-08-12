@@ -176,7 +176,7 @@ public class SoundTweaksScreen extends Screen {
             int manageY = this.height - MANAGE_H - 4;
             this.addRenderableWidget(Button.builder(
                     Component.translatable("soundtweaks.presets.manage"),
-                    b -> this.minecraft.setScreen(new PresetsScreen(this))
+                    b -> this.minecraft.gui.setScreen(new PresetsScreen(this))
             ).bounds(sideX + 2, manageY, SIDE_W - 4, MANAGE_H).build());
         }
 
@@ -636,6 +636,6 @@ public class SoundTweaksScreen extends Screen {
         savedObject   = this.selectedObject;
         savedSearch   = this.searchQuery;
         savedScroll   = this.soundList != null ? this.soundList.getScrollAmount() : 0.0;
-        this.minecraft.setScreen(this.parent);
+        this.minecraft.gui.setScreen(this.parent);
     }
 }

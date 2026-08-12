@@ -840,13 +840,13 @@ public class PresetsScreen extends Screen {
         if (editingPreset == null) return;
         PresetConfig.Preset toDelete = editingPreset;
         setEditMode(EditMode.COLOR); // reset before opening overlay — ensures clean state on return
-        this.minecraft.setScreen(new ConfirmScreen(
+        this.minecraft.gui.setScreen(new ConfirmScreen(
             confirmed -> {
                 if (confirmed) {
                     PresetConfig.deletePreset(toDelete.id);
                     closeDetailPanel();
                 }
-                this.minecraft.setScreen(PresetsScreen.this);
+                this.minecraft.gui.setScreen(PresetsScreen.this);
             },
             Component.translatable("soundtweaks.presets.delete_title"),
             Component.empty()
@@ -949,8 +949,8 @@ public class PresetsScreen extends Screen {
     }
 
     private void showImportConflictWarning(int count) {
-        this.minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmLinkScreen(
-            confirmed -> this.minecraft.setScreen(PresetsScreen.this),
+        this.minecraft.gui.setScreen(new net.minecraft.client.gui.screens.ConfirmLinkScreen(
+            confirmed -> this.minecraft.gui.setScreen(PresetsScreen.this),
             Component.translatable("soundtweaks.presets.import_conflict_body", count),
             PresetConfig.WIKI_PRESETS_URL,
             true
@@ -964,7 +964,7 @@ public class PresetsScreen extends Screen {
     }
 
     @Override
-    public void onClose() { this.minecraft.setScreen(parent); }
+    public void onClose() { this.minecraft.gui.setScreen(parent); }
 
     // =========================================================================
     // Preset list (left panel)

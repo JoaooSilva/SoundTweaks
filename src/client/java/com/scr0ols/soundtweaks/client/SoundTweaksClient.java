@@ -80,7 +80,7 @@ public class SoundTweaksClient implements ClientModInitializer {
             PresetConfig.tickSave();
 
             // Preset shortcuts — only active when no screen is open
-            if (client.screen == null && client.getOverlay() == null) {
+            if (client.gui.screen() == null && client.gui.overlay() == null) {
                 long win = GLFW.glfwGetCurrentContext();
                 if (win == 0L) return; // invalid GLFW context — skip
 
@@ -116,10 +116,10 @@ public class SoundTweaksClient implements ClientModInitializer {
             }
 
             while (openMenuKey.consumeClick()) {
-                client.setScreen(new SoundTweaksScreen(client.screen));
+                client.gui.setScreen(new SoundTweaksScreen(client.gui.screen()));
             }
             while (openPresetsKey.consumeClick()) {
-                client.setScreen(new PresetsScreen(client.screen));
+                client.gui.setScreen(new PresetsScreen(client.gui.screen()));
             }
             /*while (perfReportKey.consumeClick()) {
                 String report = PerfStats.reportAndReset();

@@ -94,7 +94,7 @@ public class ImportConfigScreen extends Screen {
         this.addRenderableWidget(exportBtn);
 
         this.cancelBtn = Button.builder(Component.translatable("soundtweaks.gui.cancel"),
-                btn -> this.minecraft.setScreen(parent)
+                btn -> this.minecraft.gui.setScreen(parent)
         ).bounds(btnStartX + (btnW + btnGap) * 2, btnY, btnW, 20).build();
         this.addRenderableWidget(cancelBtn);
     }
@@ -192,7 +192,7 @@ public class ImportConfigScreen extends Screen {
                 feedbackMsg   = "Success! Imported " + ir.imported() + " presets.";
                 feedbackColor = 0xFF88FF88;
                 if (onSuccess != null) onSuccess.run();
-                this.minecraft.setScreen(parent);
+                this.minecraft.gui.setScreen(parent);
             }
             return;
         }
@@ -214,7 +214,7 @@ public class ImportConfigScreen extends Screen {
             feedbackMsg   = "Success! Imported " + result + " entries.";
             feedbackColor = 0xFF88FF88;
             if (onSuccess != null) onSuccess.run();
-            this.minecraft.setScreen(parent);
+            this.minecraft.gui.setScreen(parent);
         }
     }
 
@@ -225,7 +225,7 @@ public class ImportConfigScreen extends Screen {
             doImport(); return true;
         }
         if (key == GLFW.GLFW_KEY_ESCAPE) {
-            this.minecraft.setScreen(parent); return true;
+            this.minecraft.gui.setScreen(parent); return true;
         }
         return super.keyPressed(event);
     }
@@ -242,5 +242,5 @@ public class ImportConfigScreen extends Screen {
     }
 
     @Override
-    public void onClose() { this.minecraft.setScreen(parent); }
+    public void onClose() { this.minecraft.gui.setScreen(parent); }
 }
